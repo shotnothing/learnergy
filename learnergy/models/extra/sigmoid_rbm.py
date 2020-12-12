@@ -70,6 +70,6 @@ class SigmoidRBM(RBM):
             probs = torch.sigmoid(activations)
 
         # Copying states as current probabilities
-        states = probs
+        states = probs.detach()
 
         return states, probs

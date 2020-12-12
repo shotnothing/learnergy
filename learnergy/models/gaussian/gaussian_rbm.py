@@ -106,7 +106,7 @@ class GaussianRBM(RBM):
             # Gathers the states as usual
             states = activations
 
-        return states, activations
+        return states.detach(), activations.detach()
 
 
 class GaussianReluRBM(GaussianRBM):
@@ -174,7 +174,7 @@ class GaussianReluRBM(GaussianRBM):
         # Current states equals probabilities
         states = probs
 
-        return probs, states
+        return probs.detach(), states.detach()
 
 
 class VarianceGaussianRBM(RBM):
@@ -273,7 +273,7 @@ class VarianceGaussianRBM(RBM):
         # Sampling current states
         states = torch.bernoulli(probs)
 
-        return probs, states
+        return probs.detach(), states.detach()
 
     def visible_sampling(self, h, scale=False):
         """Performs the visible layer sampling, i.e., P(v|h).
@@ -304,7 +304,7 @@ class VarianceGaussianRBM(RBM):
         # Sampling current states from a Gaussian distribution
         states = torch.normal(activations, torch.pow(sigma, 2))
 
-        return states, activations
+        return states.detach(), activations.detach()
 
     def energy(self, samples):
         """Calculates and frees the system's energy.

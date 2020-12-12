@@ -316,15 +316,7 @@ class ConvDBN(Model):
             # If there is no transform
             else:
                 # Just gather the samples
-                samples = d.data
-
-            # Checking whether GPU is avaliable and if it should be used
-            if self.device == 'cuda':
-                # Applies the GPU usage to the data
-                samples = samples.cuda()
-
-            # Reshape the samples into an appropriate shape
-            samples = samples.reshape(len(dataset), model.n_channels, model.visible_shape[0], model.visible_shape[1])
+                samples = d.data            
 
             # Gathers the targets
             targets = d.targets
@@ -332,16 +324,30 @@ class ConvDBN(Model):
             # Gathers the transform callable from current dataset
             transform = None
 
-            # Performs a forward pass over the samples to get their probabilities
-            samples, _ = model.hidden_sampling(samples)
+            if (i+1)<self.n_layers:
+               # Creating an auxiliary dataset to gather the new samples
+                samples_aux = torch.zeros((len(d), self.models[i+1].n_channels, model.hidden_shape[0], 
+                                          model.hidden_shape[1]), dtype=torch.float)
 
-            # Checking whether GPU is being used
-            if self.device == 'cuda':
-                # If yes, get samples back to the CPU
-                samples = samples.cpu()
+               # Creating the batches to iterate
+                batches = DataLoader(d, batch_size=batch_size, shuffle=False, num_workers=0)
+                idx = 0
 
-            # Detaches the variable from the computing graph
-            samples = samples.detach()
+               # For every batch
+                for sps, _ in tqdm(batches):
+                    # Checking whether GPU is avaliable and if it should be used
+                    if self.device == 'cuda':
+                        # Applies the GPU usage to the data
+                        sps = sps.cuda()
+
+                    # Performing a hidden layer sampling
+                    sps, _ = model.hidden_sampling(sps)
+
+                    # Gather the samples
+                    samples_aux[idx:(idx+sps.size(0))] = sps.detach().cpu()
+                    idx += sps.size(0)
+
+                samples = samples_aux
 
         return mse
 
@@ -387,12 +393,15 @@ class ConvDBN(Model):
                 hidden_probs, _ = model.hidden_sampling(hidden_probs)
 
             # Applying the initial visible probabilities as the hidden probabilities
-            visible_probs = hidden_probs
+            visible_probs = hidden_probs.detach()
 
             # For every possible model (CRBM)
             for model in reversed(self.models):
                 # Performing a visible layer sampling
                 visible_probs, visible_states = model.visible_sampling(visible_probs)
+
+            visible_states = visible_states.detach()
+            samples = samples.detach()
 
             # Calculating current's batch reconstruction MSE
             batch_mse = torch.div(
@@ -424,4 +433,4 @@ class ConvDBN(Model):
             # Calculates the outputs of the model
             x, _ = model.hidden_sampling(x)
 
-        return x
+        return x.detach()

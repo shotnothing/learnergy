@@ -291,7 +291,7 @@ class RBM(Model):
             # Scales the activations with temperature
             activations = torch.div(activations, self.T)
 
-        return activations
+        return activations.detach()
 
     def hidden_sampling(self, v, scale=False):
         """Performs the hidden layer sampling, i.e., P(h|v).
@@ -321,7 +321,7 @@ class RBM(Model):
         # Sampling current states
         states = torch.bernoulli(probs)
 
-        return probs, states
+        return probs.detach(), states.detach()
 
     def visible_sampling(self, h, scale=False):
         """Performs the visible layer sampling, i.e., P(v|h).
@@ -351,7 +351,7 @@ class RBM(Model):
         # Sampling current states
         states = torch.bernoulli(probs)
 
-        return probs, states
+        return probs.detach(), states.detach()
 
     def gibbs_sampling(self, v):
         """Performs the whole Gibbs sampling procedure.
@@ -606,4 +606,4 @@ class RBM(Model):
         # Calculates the outputs of the model
         x, _ = self.hidden_sampling(x)
 
-        return x
+        return x.detach()

@@ -103,7 +103,7 @@ class DropoutRBM(RBM):
         # Sampling current states
         states = torch.bernoulli(probs)
 
-        return probs, states
+        return probs.detach(), states.detach()
 
     def reconstruct(self, dataset):
         """Reconstructs batches of new samples.

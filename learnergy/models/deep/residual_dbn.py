@@ -219,4 +219,4 @@ class ResidualDBN(DBN):
             # Normalizes the input for the next layer
             x = torch.div(x, torch.max(x))
 
-        return x
+        return x.detach()

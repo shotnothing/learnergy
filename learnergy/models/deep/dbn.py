@@ -315,30 +315,39 @@ class DBN(Model):
                 # Just gather the samples
                 samples = d.data
 
-            # Checking whether GPU is avaliable and if it should be used
-            if self.device == 'cuda':
-                # Applies the GPU usage to the data
-                samples = samples.cuda()
-
-            # Reshape the samples into an appropriate shape
-            samples = samples.reshape(len(dataset), model.n_visible)
-
             # Gathers the targets
             targets = d.targets
 
             # Gathers the transform callable from current dataset
             transform = None
 
-            # Performs a forward pass over the samples to get their probabilities
-            samples, _ = model.hidden_sampling(samples)
+            if (i+1)<self.n_layers:
+               # Creating an auxiliary dataset to gather the new samples
+                samples_aux = torch.zeros((len(d), self.models[i+1].n_visible), dtype=torch.float)
 
-            # Checking whether GPU is being used
-            if self.device == 'cuda':
-                # If yes, get samples back to the CPU
-                samples = samples.cpu()
+               # Creating the batches to iterate
+                batches = DataLoader(d, batch_size=batch_size, shuffle=False, num_workers=0)
+                idx = 0
 
-            # Detaches the variable from the computing graph
-            samples = samples.detach()
+               # For every batch
+                for sps, _ in tqdm(batches):
+                    # Checking whether GPU is avaliable and if it should be used
+                    if self.device == 'cuda':
+                        # Applies the GPU usage to the data
+                        sps = sps.cuda()
+
+                    try:
+                        sps = sps.reshape((sps.size(0), sps.size(2)*sps.size(3)))
+                    except:
+                        sps = sps.reshape((sps.size(0), sps.size(1)))
+                    # Performing a hidden layer sampling
+                    sps, _ = model.hidden_sampling(sps)
+
+                    # Gather the samples
+                    samples_aux[idx:(idx+sps.size(0))] = sps.detach().cpu()
+                    idx += sps.size(0)
+
+                samples = samples_aux
 
         return mse, pl
 
@@ -386,7 +395,7 @@ class DBN(Model):
                 hidden_probs, _ = model.hidden_sampling(hidden_probs)
 
             # Applying the initial visible probabilities as the hidden probabilities
-            visible_probs = hidden_probs
+            visible_probs = hidden_probs.detach()
 
             # For every possible model (RBM)
             for model in reversed(self.models):
@@ -397,6 +406,9 @@ class DBN(Model):
                 # Performing a visible layer sampling
                 visible_probs, visible_states = model.visible_sampling(
                     visible_probs)
+ 
+            visible_states = visible_states.detach()
+            samples = samples.detach()
 
             # Calculating current's batch reconstruction MSE
             batch_mse = torch.div(
@@ -428,4 +440,4 @@ class DBN(Model):
             # Calculates the outputs of current model
             x, _ = model.hidden_sampling(x)
 
-        return x
+        return x.detach()

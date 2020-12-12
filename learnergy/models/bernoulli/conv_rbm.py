@@ -330,10 +330,10 @@ class ConvRBM(Model):
         activations = F.conv2d(v, self.W, bias=self.b)
 
         # Calculates probabilities
-        probs = torch.sigmoid(activations)
+        probs = torch.sigmoid(activations).detach()
 
         # Sampling current states
-        states = torch.bernoulli(probs)
+        states = torch.bernoulli(probs).detach()
 
         return probs, states
 
@@ -352,10 +352,10 @@ class ConvRBM(Model):
         activations = F.conv_transpose2d(h, self.W, bias=self.a)
 
         # Calculates probabilities
-        probs = torch.sigmoid(activations)
+        probs = torch.sigmoid(activations).detach()
 
         # Sampling current states
-        states = torch.bernoulli(probs)
+        states = torch.bernoulli(probs).detach()
 
         return probs, states
 

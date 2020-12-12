@@ -86,7 +86,7 @@ class GaussianConvRBM(ConvRBM):
         # Calculate probabilities
         probs = F.relu6(activations).detach()
 
-        return probs, probs
+        return probs.detach(), probs.detach()
 
     def visible_sampling(self, h):
         """Performs the visible layer sampling, i.e., P(v|h).
@@ -112,7 +112,7 @@ class GaussianConvRBM(ConvRBM):
             # Applies a non-linear function
             probs = F.relu6(activations).detach()
 
-        return probs, probs
+        return probs.detach(), probs.detach()
 
     def fit(self, dataset, batch_size=128, epochs=10):
         """Fits a new RBM model.
