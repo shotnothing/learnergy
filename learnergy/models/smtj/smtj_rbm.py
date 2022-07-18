@@ -249,10 +249,21 @@ class SMTJRBM(Model):
         self._optimizer = optimizer
 
     def setup_slope_shift(self):
-        self.v_slope = nn.Parameter(torch.abs(torch.randn(self.n_visible) * self.sigma_initial_slope + 1), requires_grad=False)
-        self.v_shift = nn.Parameter(torch.randn(self.n_visible) * self.sigma_initial_shift, requires_grad=False)
-        self.h_slope = nn.Parameter(torch.abs(torch.randn(self.n_hidden) * self.sigma_initial_slope + 1), requires_grad=False)
-        self.h_shift = nn.Parameter(torch.randn(self.n_hidden) * self.sigma_initial_shift, requires_grad=False)
+        self.v_slope = nn.Parameter(
+            torch.abs(torch.randn(self.n_visible) * self.sigma_initial_slope + 1), 
+            requires_grad=False)
+
+        self.v_shift = nn.Parameter(
+            torch.randn(self.n_visible) * self.sigma_initial_shift, 
+            requires_grad=False)
+
+        self.h_slope = nn.Parameter(
+            torch.abs(torch.randn(self.n_hidden) * self.sigma_initial_slope + 1), 
+            requires_grad=False)
+
+        self.h_shift = nn.Parameter(
+            torch.randn(self.n_hidden) * self.sigma_initial_shift,
+            requires_grad=False)
 
     def sample_from_p(self, p: torch.Tensor) -> torch.Tensor:
         # To reimplement
@@ -274,8 +285,11 @@ class SMTJRBM(Model):
         """
 
         # Calculating neurons' activations
-        activations = F.linear(v, self.W.t(), self.b)
-
+        activations = F.linear(
+            v, 
+            (self.W * self.h_slope).t(), 
+            self.b * self.h_slope + self.h_shift
+        )
         # If scaling is true
         if scale:
             # Scales the activations with temperature
@@ -332,7 +346,6 @@ class SMTJRBM(Model):
             (torch.Tensor): The probabilities and states of the visible layer sampling.
 
         """
-
         # Calculating neurons' activations
         activations = F.linear(
             h, 
@@ -379,7 +392,9 @@ class SMTJRBM(Model):
         # Performing the Contrastive Divergence
         for _ in range(self.steps):
             # Calculating visible probabilities and states
-            _, visible_states = self.visible_sampling(neg_hidden_states, True)
+            _, visible_states = self.visible_sampling(
+                neg_hidden_states, True
+            )
 
             # Calculating hidden probabilities and states
             neg_hidden_probs, neg_hidden_states = self.hidden_sampling(
