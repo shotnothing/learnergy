@@ -1,0 +1,1 @@
+from learnergy.models.smtj.smtj_rbm import SMTJRBM

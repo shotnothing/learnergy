@@ -1,4 +1,4 @@
-"""Bernoulli-Bernoulli Restricted Boltzmann Machine.
+"""SMTJ Bernoulli-Bernoulli Restricted Boltzmann Machine.
 """
 
 import time
@@ -19,11 +19,13 @@ from learnergy.utils import logging
 logger = logging.get_logger(__name__)
 
 
-class RBM(Model):
+class SMTJRBM(Model):
     """An RBM class provides the basic implementation for Bernoulli-Bernoulli Restricted Boltzmann Machines.
+
     References:
         G. Hinton. A practical guide to training restricted Boltzmann machines.
         Neural networks: Tricks of the trade (2012).
+
     """
 
     def __init__(
@@ -36,8 +38,12 @@ class RBM(Model):
         decay: Optional[float] = 0.0,
         temperature: Optional[float] = 1.0,
         use_gpu: Optional[bool] = False,
+        sigma_ratio: Optional[float] = 0.5,
+        sigma_initial_shift: Optional[float] = 0.3,
+        sigma_initial_slope: Optional[float] = 0.3
     ) -> None:
         """Initialization method.
+
         Args:
             n_visible: Amount of visible units.
             n_hidden: Amount of hidden units.
@@ -47,11 +53,12 @@ class RBM(Model):
             decay: Weight decay used for penalization.
             temperature: Temperature factor.
             use_gpu: Whether GPU should be used or not.
+
         """
 
         logger.info("Overriding class: Model -> RBM.")
 
-        super(RBM, self).__init__(use_gpu=use_gpu)
+        super(SMTJRBM, self).__init__(use_gpu=use_gpu)
 
         # Amount of visible units
         self.n_visible = n_visible
@@ -82,6 +89,10 @@ class RBM(Model):
 
         # Hidden units bias
         self.b = nn.Parameter(torch.zeros(n_hidden))
+
+        self.sigma_ratio = sigma_ratio
+        self.sigma_initial_shift = sigma_initial_shift
+        self.sigma_initial_slope = sigma_initial_slope
 
         # Creating the optimizer object
         self.optimizer = opt.SGD(
@@ -237,15 +248,29 @@ class RBM(Model):
     def optimizer(self, optimizer: torch.optim.SGD) -> None:
         self._optimizer = optimizer
 
+    def setup_slope_shift(self):
+        self.v_slope = nn.Parameter(torch.abs(torch.randn(self.n_visible) * self.sigma_initial_slope + 1), requires_grad=False)
+        self.v_shift = nn.Parameter(torch.randn(self.n_visible) * self.sigma_initial_shift, requires_grad=False)
+        self.h_slope = nn.Parameter(torch.abs(torch.randn(self.n_hidden) * self.sigma_initial_slope + 1), requires_grad=False)
+        self.h_shift = nn.Parameter(torch.randn(self.n_hidden) * self.sigma_initial_shift, requires_grad=False)
+
+    def sample_from_p(self, p: torch.Tensor) -> torch.Tensor:
+        # To reimplement
+        p = torch.randn(p.shape) * self.sigma_ratio * (0.5 - torch.abs(p - 0.5)) + p
+        return F.relu(torch.sign(p - torch.autograd .Variable(torch.rand(p.size()))))
+
     def pre_activation(
         self, v: torch.Tensor, scale: Optional[bool] = False
     ) -> torch.Tensor:
         """Performs the pre-activation over hidden neurons, i.e., Wx' + b.
+
         Args:
             v: A tensor incoming from the visible layer.
             scale: A boolean to decide whether temperature should be used or not.
+
         Returns:
             (torch.Tensor): An input for any type of activation function.
+
         """
 
         # Calculating neurons' activations
@@ -262,15 +287,22 @@ class RBM(Model):
         self, v: torch.Tensor, scale: Optional[bool] = False
     ) -> torch.Tensor:
         """Performs the hidden layer sampling, i.e., P(h|v).
+
         Args:
             v: A tensor incoming from the visible layer.
             scale: A boolean to decide whether temperature should be used or not.
+
         Returns:
             (torch.Tensor): The probabilities and states of the hidden layer sampling.
+
         """
 
         # Calculating neurons' activations
-        activations = F.linear(v, self.W.t(), self.b)
+        activations = F.linear(
+            v, 
+            (self.W * self.h_slope).t(), 
+            self.b * self.h_slope + self.h_shift
+        )
 
         # If scaling is true
         if scale:
@@ -283,7 +315,7 @@ class RBM(Model):
             probs = torch.sigmoid(activations)
 
         # Sampling current states
-        states = torch.bernoulli(probs)
+        states = self.sample_from_p(probs)
 
         return probs, states
 
@@ -291,16 +323,23 @@ class RBM(Model):
         self, h: torch.Tensor, scale: Optional[bool] = False
     ) -> torch.Tensor:
         """Performs the visible layer sampling, i.e., P(v|h).
+
         Args:
             h: A tensor incoming from the hidden layer.
             scale: A boolean to decide whether temperature should be used or not.
+
         Returns:
             (torch.Tensor): The probabilities and states of the visible layer sampling.
+
         """
 
         # Calculating neurons' activations
-        activations = F.linear(h, self.W, self.a)
-
+        activations = F.linear(
+            h, 
+            (self.W.t() * self.v_slope).t(), 
+            self.a * self.v_slope + self.v_shift
+        )
+        
         # If scaling is true
         if scale:
             # Calculate probabilities with temperature
@@ -312,7 +351,7 @@ class RBM(Model):
             probs = torch.sigmoid(activations)
 
         # Sampling current states
-        states = torch.bernoulli(probs)
+        states = self.sample_from_p(probs)
 
         return probs, states
 
@@ -320,12 +359,15 @@ class RBM(Model):
         self, v: torch.Tensor
     ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
         """Performs the whole Gibbs sampling procedure.
+
         Args:
             v: A tensor incoming from the visible layer.
+
         Returns:
             (Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]): The probabilities and states of the hidden layer sampling (positive),
                 the probabilities and states of the hidden layer sampling (negative)
                 and the states of the visible layer sampling (negative).
+
         """
 
         # Calculating positive phase hidden probabilities and states
@@ -354,10 +396,13 @@ class RBM(Model):
 
     def energy(self, samples: torch.Tensor) -> torch.Tensor:
         """Calculates and frees the system's energy.
+
         Args:
             samples: Samples to be energy-freed.
+
         Returns:
             (torch.Tensor): The system's energy based on input samples.
+
         """
 
         # Calculate samples' activations
@@ -379,10 +424,13 @@ class RBM(Model):
 
     def pseudo_likelihood(self, samples: torch.Tensor) -> torch.Tensor:
         """Calculates the logarithm of the pseudo-likelihood.
+
         Args:
             samples: Samples to be calculated.
+
         Returns:
             (torch.Tensor): The logarithm of the pseudo-likelihood based on input samples.
+
         """
 
         # Gathering a new array to hold the rounded samples
@@ -422,18 +470,23 @@ class RBM(Model):
         epochs: Optional[int] = 10,
     ) -> Tuple[float, float]:
         """Fits a new RBM model.
+
         Args:
             dataset: A Dataset object containing the training data.
             batch_size: Amount of samples per batch.
             epochs: Number of training epochs.
+
         Returns:
             (Tuple[float, float]): MSE (mean squared error) and log pseudo-likelihood from the training step.
+
         """
 
         # Transforming the dataset into training batches
         batches = DataLoader(
             dataset, batch_size=batch_size, shuffle=True, num_workers=0
         )
+
+        self.setup_slope_shift()
 
         # For every epoch
         for epoch in range(epochs):
@@ -508,10 +561,13 @@ class RBM(Model):
         self, dataset: torch.utils.data.Dataset
     ) -> Tuple[float, torch.Tensor]:
         """Reconstructs batches of new samples.
+
         Args:
             dataset: A Dataset object containing the testing data.
+
         Returns:
             (Tuple[float, torch.Tensor]): Reconstruction error and visible probabilities, i.e., P(v|h).
+
         """
 
         logger.info("Reconstructing new samples ...")
@@ -560,10 +616,13 @@ class RBM(Model):
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Performs a forward pass over the data.
+
         Args:
             x: An input tensor for computing the forward pass.
+
         Returns:
             (torch.Tensor): A tensor containing the RBM's outputs.
+
         """
 
         # Calculates the outputs of the model

@@ -5,7 +5,7 @@ import torchvision
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
-from learnergy.models.bernoulli import RBM
+from learnergy.models.smtj import SMTJRBM
 
 # Defining some input variables
 batch_size = 128
@@ -28,7 +28,7 @@ if __name__ == '__main__':
     )
 
     # Creating an RBM
-    model = RBM(
+    model = SMTJRBM(
         n_visible=784,
         n_hidden=128,
         steps=1,
