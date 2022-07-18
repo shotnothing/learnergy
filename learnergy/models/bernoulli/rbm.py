@@ -38,6 +38,9 @@ class RBM(Model):
         decay: Optional[float] = 0.0,
         temperature: Optional[float] = 1.0,
         use_gpu: Optional[bool] = False,
+        sigma_ratio: Optional[float] = 0.5,
+        sigma_initial_shift: Optional[float] = 0.3,
+        sigma_initial_slope: Optional[float] = 0.1
     ) -> None:
         """Initialization method.
 
@@ -241,6 +244,17 @@ class RBM(Model):
     def optimizer(self, optimizer: torch.optim.SGD) -> None:
         self._optimizer = optimizer
 
+    def setup_slope_shift(self):
+        self.v_slope = nn.Parameter(torch.abs(torch.randn(self.n_visible) * sigma_initial_slope + 1), requires_grad=False)
+        self.v_shift = nn.Parameter(torch.randn(self.n_visible) * sigma_initial_shift, requires_grad=False)
+        self.h_slope = nn.Parameter(torch.abs(torch.randn(self.n_hidden) * sigma_initial_slope + 1), requires_grad=False)
+        self.h_shift = nn.Parameter(torch.randn(self.n_hidden) * sigma_initial_shift, requires_grad=False)
+
+    def sample_from_p(self, p: torch.Tensor) -> torch.Tensor:
+        # To reimplement
+        p = torch.randn(p.shape) * self.sigma_ratio * (0.5 - torch.abs(p - 0.5)) + p
+        return F.relu(torch.sign(p - Variable(torch.rand(p.size()))))
+
     def pre_activation(
         self, v: torch.Tensor, scale: Optional[bool] = False
     ) -> torch.Tensor:
@@ -280,7 +294,11 @@ class RBM(Model):
         """
 
         # Calculating neurons' activations
-        activations = F.linear(v, self.W.t(), self.b)
+        activations = F.linear(
+            v, 
+            self.W.t() * self.h_slope, 
+            self.b * self.h_slope + self.h_shift
+        )
 
         # If scaling is true
         if scale:
@@ -293,7 +311,7 @@ class RBM(Model):
             probs = torch.sigmoid(activations)
 
         # Sampling current states
-        states = torch.bernoulli(probs)
+        states = sample_from_p(probs)
 
         return probs, states
 
@@ -312,8 +330,12 @@ class RBM(Model):
         """
 
         # Calculating neurons' activations
-        activations = F.linear(h, self.W, self.a)
-
+        activations = F.linear(
+            h, 
+            (self.W.t() * self.v_slope).t(), 
+            self.a * self.v_slope + self.v_shift
+        )
+        
         # If scaling is true
         if scale:
             # Calculate probabilities with temperature
@@ -325,7 +347,7 @@ class RBM(Model):
             probs = torch.sigmoid(activations)
 
         # Sampling current states
-        states = torch.bernoulli(probs)
+        states = sample_from_p(probs)
 
         return probs, states
 
@@ -459,6 +481,8 @@ class RBM(Model):
         batches = DataLoader(
             dataset, batch_size=batch_size, shuffle=True, num_workers=0
         )
+
+        setup_slope_shift()
 
         # For every epoch
         for epoch in range(epochs):
