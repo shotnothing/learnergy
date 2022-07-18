@@ -90,6 +90,10 @@ class RBM(Model):
         # Hidden units bias
         self.b = nn.Parameter(torch.zeros(n_hidden))
 
+        self.sigma_ratio = sigma_ratio
+        self.sigma_initial_shift = sigma_initial_shift
+        self.sigma_initial_slope = sigma_initial_slope
+
         # Creating the optimizer object
         self.optimizer = opt.SGD(
             self.parameters(), lr=learning_rate, momentum=momentum, weight_decay=decay
@@ -245,15 +249,15 @@ class RBM(Model):
         self._optimizer = optimizer
 
     def setup_slope_shift(self):
-        self.v_slope = nn.Parameter(torch.abs(torch.randn(self.n_visible) * sigma_initial_slope + 1), requires_grad=False)
-        self.v_shift = nn.Parameter(torch.randn(self.n_visible) * sigma_initial_shift, requires_grad=False)
-        self.h_slope = nn.Parameter(torch.abs(torch.randn(self.n_hidden) * sigma_initial_slope + 1), requires_grad=False)
-        self.h_shift = nn.Parameter(torch.randn(self.n_hidden) * sigma_initial_shift, requires_grad=False)
+        self.v_slope = nn.Parameter(torch.abs(torch.randn(self.n_visible) * self.sigma_initial_slope + 1), requires_grad=False)
+        self.v_shift = nn.Parameter(torch.randn(self.n_visible) * self.sigma_initial_shift, requires_grad=False)
+        self.h_slope = nn.Parameter(torch.abs(torch.randn(self.n_hidden) * self.sigma_initial_slope + 1), requires_grad=False)
+        self.h_shift = nn.Parameter(torch.randn(self.n_hidden) * self.sigma_initial_shift, requires_grad=False)
 
     def sample_from_p(self, p: torch.Tensor) -> torch.Tensor:
         # To reimplement
         p = torch.randn(p.shape) * self.sigma_ratio * (0.5 - torch.abs(p - 0.5)) + p
-        return F.relu(torch.sign(p - Variable(torch.rand(p.size()))))
+        return F.relu(torch.sign(p - torch.autograd .Variable(torch.rand(p.size()))))
 
     def pre_activation(
         self, v: torch.Tensor, scale: Optional[bool] = False
@@ -296,7 +300,7 @@ class RBM(Model):
         # Calculating neurons' activations
         activations = F.linear(
             v, 
-            self.W.t() * self.h_slope, 
+            (self.W * self.h_slope).t(), 
             self.b * self.h_slope + self.h_shift
         )
 
@@ -311,7 +315,7 @@ class RBM(Model):
             probs = torch.sigmoid(activations)
 
         # Sampling current states
-        states = sample_from_p(probs)
+        states = self.sample_from_p(probs)
 
         return probs, states
 
@@ -347,7 +351,7 @@ class RBM(Model):
             probs = torch.sigmoid(activations)
 
         # Sampling current states
-        states = sample_from_p(probs)
+        states = self.sample_from_p(probs)
 
         return probs, states
 
@@ -482,7 +486,7 @@ class RBM(Model):
             dataset, batch_size=batch_size, shuffle=True, num_workers=0
         )
 
-        setup_slope_shift()
+        self.setup_slope_shift()
 
         # For every epoch
         for epoch in range(epochs):
