@@ -12,8 +12,8 @@ learnergy.log.*
 **/*.pth
 **/*.pkl
 
-# Data folder
-data/**
+# # Data folder
+# data/**
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
