@@ -39,8 +39,6 @@ if __name__ == '__main__':
         use_gpu=True,
     )
 
-    print(model.device)
-
     # Training an RBM
     model.fit(train, batch_size=batch_size, epochs=1)
 
@@ -64,6 +62,9 @@ if __name__ == '__main__':
     # Creating training and validation batches
     train_batch = DataLoader(train, batch_size=batch_size, shuffle=False, num_workers=1)
     val_batch = DataLoader(test, batch_size=10000, shuffle=False, num_workers=1)
+
+    print(type(train_batch))
+    exit()
 
     # For amount of fine-tuning epochs
     for e in range(fine_tune_epochs):
