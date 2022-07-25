@@ -14,18 +14,22 @@ fine_tune_epochs = 20
 
 if __name__ == '__main__':
     # Creating training and validation/testing dataset
-    train = torchvision.datasets.MNIST(
-        root="./data",
-        train=True,
-        download=True,
-        transform=torchvision.transforms.ToTensor(),
-    )
-    test = torchvision.datasets.MNIST(
-        root="./data",
-        train=False,
-        download=True,
-        transform=torchvision.transforms.ToTensor(),
-    )
+    # train = torchvision.datasets.MNIST(
+    #     root="./data",
+    #     train=True,
+    #     download=True,
+    #     transform=torchvision.transforms.ToTensor(),
+    # )
+    # test = torchvision.datasets.MNIST(
+    #     root="./data",
+    #     train=False,
+    #     download=True,
+    #     transform=torchvision.transforms.ToTensor(),
+    # )
+    
+    from data.mnist_smtj import SMTJMnistDataset
+    train = SMTJMnistDataset(train=True)
+    test = SMTJMnistDataset(train=False)
 
     # Creating an RBM
     model = RBM(

@@ -6,6 +6,7 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 
 from learnergy.models.smtj import SMTJRBM
+from data.mnist_smtj import SMTJMnistDataset
 
 # Defining some input variables
 batch_size = 128
@@ -14,6 +15,9 @@ fine_tune_epochs = 20
 
 if __name__ == '__main__':
     # Creating training and validation/testing dataset
+    train = SMTJMnistDataset(train=True)
+    test = SMTJMnistDataset(train=False)
+
     train = torchvision.datasets.MNIST(
         root="./data",
         train=True,
@@ -26,6 +30,7 @@ if __name__ == '__main__':
         download=True,
         transform=torchvision.transforms.ToTensor(),
     )
+    print(len(test))
 
     # Creating an RBM
     model = SMTJRBM(
@@ -60,11 +65,8 @@ if __name__ == '__main__':
     ]
 
     # Creating training and validation batches
-    train_batch = DataLoader(train, batch_size=batch_size, shuffle=False, num_workers=1)
-    val_batch = DataLoader(test, batch_size=10000, shuffle=False, num_workers=1)
-
-    print(type(train_batch))
-    exit()
+    train_batch = DataLoader(train, batch_size=256, shuffle=False, num_workers=1)
+    val_batch = DataLoader(test, batch_size=256, shuffle=False, num_workers=1)
 
     # For amount of fine-tuning epochs
     for e in range(fine_tune_epochs):
