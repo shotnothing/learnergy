@@ -5,6 +5,7 @@ import torchvision
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
+from learnergy.models.bernoulli.rbm import RBM
 from learnergy.models.smtj import SMTJRBM
 from data.mnist_smtj import SMTJMnistDataset
 
@@ -18,30 +19,32 @@ if __name__ == '__main__':
     train = SMTJMnistDataset(train=True)
     test = SMTJMnistDataset(train=False)
 
-    train = torchvision.datasets.MNIST(
-        root="./data",
-        train=True,
-        download=True,
-        transform=torchvision.transforms.ToTensor(),
-    )
-    test = torchvision.datasets.MNIST(
-        root="./data",
-        train=False,
-        download=True,
-        transform=torchvision.transforms.ToTensor(),
-    )
-    print(len(test))
+    # train = torchvision.datasets.MNIST(
+    #     root="./data",
+    #     train=True,
+    #     download=True,
+    #     transform=torchvision.transforms.ToTensor(),
+    # )
+    # test = torchvision.datasets.MNIST(
+    #     root="./data",
+    #     train=False,
+    #     download=True,
+    #     transform=torchvision.transforms.ToTensor(),
+    # )
 
-    # Creating an RBM
+
     model = SMTJRBM(
         n_visible=784,
-        n_hidden=128,
+        n_hidden=100,
         steps=1,
         learning_rate=0.1,
         momentum=0,
         decay=0,
         temperature=1,
         use_gpu=True,
+        sigma_ratio=0.5,
+        sigma_initial_shift=0,
+        sigma_initial_slope=100
     )
 
     # Training an RBM

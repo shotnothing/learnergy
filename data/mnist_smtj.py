@@ -13,7 +13,7 @@ class SMTJMnistDataset(Dataset):
         else:
             self.data = self.data[5000:6000]
 
-        self.image = torch.tensor(np.array(self.data.drop("label", axis = 1), np.float32))
+        self.image = torch.tensor(np.array(self.data.drop("label", axis = 1) / 255, np.float32))
         self.target = torch.tensor(np.array(self.data["label"].values))
 
     def __len__(self):
