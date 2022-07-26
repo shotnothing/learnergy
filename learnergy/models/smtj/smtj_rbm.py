@@ -271,13 +271,12 @@ class SMTJRBM(Model):
         return F.relu(torch.sign(p - torch.autograd .Variable(torch.rand(p.size()))))
 
     def pre_activation(
-        self, v: torch.Tensor, scale: Optional[bool] = False
+        self, v: torch.Tensor
     ) -> torch.Tensor:
         """Performs the pre-activation over hidden neurons, i.e., Wx' + b.
 
         Args:
             v: A tensor incoming from the visible layer.
-            scale: A boolean to decide whether temperature should be used or not.
 
         Returns:
             (torch.Tensor): An input for any type of activation function.
@@ -290,21 +289,17 @@ class SMTJRBM(Model):
             (self.W * self.h_slope).t(), 
             self.b * self.h_slope + self.h_shift
         )
-        # If scaling is true
-        if scale:
-            # Scales the activations with temperature
-            activations = torch.div(activations, self.T)
+
 
         return activations
 
     def hidden_sampling(
-        self, v: torch.Tensor, scale: Optional[bool] = False
+        self, v: torch.Tensor
     ) -> torch.Tensor:
         """Performs the hidden layer sampling, i.e., P(h|v).
 
         Args:
             v: A tensor incoming from the visible layer.
-            scale: A boolean to decide whether temperature should be used or not.
 
         Returns:
             (torch.Tensor): The probabilities and states of the hidden layer sampling.
@@ -318,15 +313,8 @@ class SMTJRBM(Model):
             self.b * self.h_slope + self.h_shift
         )
 
-        # If scaling is true
-        if scale:
-            # Calculate probabilities with temperature
-            probs = torch.sigmoid(torch.div(activations, self.T))
-
-        # If scaling is false
-        else:
-            # Calculate probabilities as usual
-            probs = torch.sigmoid(activations)
+        # Calculate probabilities as usual
+        probs = torch.sigmoid(activations)
 
         # Sampling current states
         states = self.sample_from_p(probs)
@@ -340,7 +328,6 @@ class SMTJRBM(Model):
 
         Args:
             h: A tensor incoming from the hidden layer.
-            scale: A boolean to decide whether temperature should be used or not.
 
         Returns:
             (torch.Tensor): The probabilities and states of the visible layer sampling.
@@ -353,15 +340,8 @@ class SMTJRBM(Model):
             self.a * self.v_slope + self.v_shift
         )
         
-        # If scaling is true
-        if scale:
-            # Calculate probabilities with temperature
-            probs = torch.sigmoid(torch.div(activations, self.T))
-
-        # If scaling is false
-        else:
-            # Calculate probabilities as usual
-            probs = torch.sigmoid(activations)
+        # Calculate probabilities
+        probs = torch.sigmoid(activations)
 
         # Sampling current states
         states = self.sample_from_p(probs)
