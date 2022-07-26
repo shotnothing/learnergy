@@ -10,9 +10,22 @@ from learnergy.models.smtj import SMTJRBM
 from data.mnist_smtj import SMTJMnistDataset
 
 # Defining some input variables
-batch_size = 128
+
+# Global
 n_classes = 10
+sigma_ratio=0.5
+sigma_initial_shift=100
+sigma_initial_slope=100
+
+# Step 1: RBM only
+batch_size = 100
+epochs = 30
+lr = 0.01
+
+# Step 2: RBM + NN
+batch_size_batch_size = 100
 fine_tune_epochs = 20
+fine_tune_lr = 0.01
 
 if __name__ == '__main__':
     # Creating training and validation/testing dataset
@@ -37,18 +50,18 @@ if __name__ == '__main__':
         n_visible=784,
         n_hidden=100,
         steps=1,
-        learning_rate=0.1,
+        learning_rate=lr,
         momentum=0,
         decay=0,
         temperature=1,
         use_gpu=True,
-        sigma_ratio=0.5,
-        sigma_initial_shift=0,
-        sigma_initial_slope=100
+        sigma_ratio=sigma_ratio,
+        sigma_initial_shift=sigma_initial_shift,
+        sigma_initial_slope=sigma_initial_slope
     )
 
     # Training an RBM
-    model.fit(train, batch_size=batch_size, epochs=1)
+    model.fit(train, batch_size=batch_size, epochs=epochs)
 
     # Creating the Fully Connected layer to append on top of RBM
     fc = nn.Linear(model.n_hidden, n_classes)
@@ -63,13 +76,13 @@ if __name__ == '__main__':
 
     # Creating the optimzers
     optimizer = [
-        optim.Adam(model.parameters(), lr=0.001),
-        optim.Adam(fc.parameters(), lr=0.001),
+        optim.Adam(model.parameters(), lr=fine_tune_lr),
+        optim.Adam(fc.parameters(), lr=fine_tune_lr),
     ]
 
     # Creating training and validation batches
-    train_batch = DataLoader(train, batch_size=256, shuffle=False, num_workers=1)
-    val_batch = DataLoader(test, batch_size=256, shuffle=False, num_workers=1)
+    train_batch = DataLoader(train, batch_size=batch_size_batch_size, shuffle=False, num_workers=1)
+    val_batch = DataLoader(test, batch_size=batch_size_batch_size, shuffle=False, num_workers=1)
 
     # For amount of fine-tuning epochs
     for e in range(fine_tune_epochs):
