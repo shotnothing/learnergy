@@ -1,31 +1,75 @@
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 import torch.optim as optim
 import torchvision
 from torch.utils.data import DataLoader
 from tqdm import tqdm
+import math
 
 from learnergy.models.bernoulli.rbm import RBM
 from learnergy.models.smtj import SMTJRBM
 from data.mnist_smtj import SMTJMnistDataset
 
 # Defining some input variables
+hist = {}
 
 # Global
 n_classes = 10
 sigma_ratio=0.5
-sigma_initial_shift=100
-sigma_initial_slope=100
+sigma_initial_shift=1
+sigma_initial_slope=1
 
-# Step 1: RBM only
+# Step 1: SMTJ Sigmoid
+size = 100
 batch_size = 100
 epochs = 30
 lr = 0.01
 
-# Step 2: RBM + NN
+# Step 2: Linear
 fine_tune_batch_size = 100
-fine_tune_epochs = 20
-fine_tune_lr = 0.01
+fine_tune_epochs = 10
+fine_tune_lr = 0.001
+
+class SMTJSigmoid(nn.Module):
+    __constants__ = ['in_features', 'out_features']
+    in_features: int
+    out_features: int
+    weight: torch.Tensor
+
+    def setup_slope_shift(self, slope: float, shift: float):
+        self.slope = nn.Parameter(torch.abs(torch.randn(size) * slope + 1), requires_grad=False)
+        self.shift = nn.Parameter(torch.randn(size) * shift, requires_grad=False)
+
+    def __init__(self, in_features: int, out_features: int, bias: bool = True,
+                 device=None, dtype=None) -> None:
+        factory_kwargs = {'device': device, 'dtype': dtype}
+        super(SMTJSigmoid, self).__init__()
+        self.in_features = in_features
+        self.out_features = out_features
+        self.weight = nn.Parameter(torch.empty((out_features, in_features), **factory_kwargs))
+        if bias:
+            self.bias = nn.Parameter(torch.empty(out_features, **factory_kwargs))
+        else:
+            self.register_parameter('bias', None)
+        self.reset_parameters()
+        self.setup_slope_shift(sigma_initial_slope,sigma_initial_shift)
+
+    def reset_parameters(self) -> None:
+        nn.init.kaiming_uniform_(self.weight, a=math.sqrt(5))
+        if self.bias is not None:
+            fan_in, _ = nn.init._calculate_fan_in_and_fan_out(self.weight)
+            bound = 1 / math.sqrt(fan_in) if fan_in > 0 else 0
+            nn.init.uniform_(self.bias, -bound, bound)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        out = F.sigmoid(
+            self.slope * (F.linear(x, self.weight))
+            + self.slope * self.bias
+            + self.shift
+        )
+        return out
+        
 
 if __name__ == '__main__':
     # Creating training and validation/testing dataset
@@ -45,31 +89,11 @@ if __name__ == '__main__':
     #     transform=torchvision.transforms.ToTensor(),
     # )
 
-
-    model = SMTJRBM(
-        n_visible=784,
-        n_hidden=100,
-        steps=1,
-        learning_rate=lr,
-        momentum=0,
-        decay=0,
-        temperature=1,
-        use_gpu=True,
-        sigma_ratio=sigma_ratio,
-        sigma_initial_shift=sigma_initial_shift,
-        sigma_initial_slope=sigma_initial_slope
-    )
-
-    # Training an RBM
-    model.fit(train, batch_size=batch_size, epochs=epochs)
+    # Training SMTJ Sigmoid
+    model = SMTJSigmoid(784, size)
 
     # Creating the Fully Connected layer to append on top of RBM
-    fc = nn.Linear(model.n_hidden, n_classes)
-
-    # Check if model uses GPU
-    if model.device == "cuda":
-        # If yes, put fully-connected on GPU
-        fc = fc.cuda()
+    fc = nn.Linear(size, n_classes)
 
     # Cross-Entropy loss is used for the discriminative fine-tuning
     criterion = nn.CrossEntropyLoss()
@@ -99,13 +123,7 @@ if __name__ == '__main__':
                 opt.zero_grad()
 
             # Flatenning the samples batch
-            x_batch = x_batch.reshape(x_batch.size(0), model.n_visible)
-
-            # Checking whether GPU is avaliable and if it should be used
-            if model.device == "cuda":
-                # Applies the GPU usage to the data and labels
-                x_batch = x_batch.cuda()
-                y_batch = y_batch.cuda()
+            x_batch = x_batch.reshape(x_batch.size(0), 784)
 
             # Passing the batch down the model
             y = model(x_batch)
@@ -127,16 +145,10 @@ if __name__ == '__main__':
             # Adding current batch loss
             train_loss += loss.item()
 
-        # Calculate the test accuracy for the model:
+        # Calculate the validation accuracy for the model:
         for x_batch, y_batch in tqdm(val_batch):
             # Flatenning the testing samples batch
-            x_batch = x_batch.reshape(x_batch.size(0), model.n_visible)
-
-            # Checking whether GPU is avaliable and if it should be used
-            if model.device == "cuda":
-                # Applies the GPU usage to the data and labels
-                x_batch = x_batch.cuda()
-                y_batch = y_batch.cuda()
+            x_batch = x_batch.reshape(x_batch.size(0), 784)
 
             # Passing the batch down the model
             y = model(x_batch)
@@ -151,9 +163,3 @@ if __name__ == '__main__':
             val_acc = torch.mean((torch.sum(preds == y_batch).float()) / x_batch.size(0))
 
         print(f"Loss: {train_loss / len(train_batch)} | Val Accuracy: {val_acc}")
-
-    # Saving the fine-tuned model
-    torch.save(model, "tuned_model.pth")
-
-    # Checking the model's history
-    print(model.history)
