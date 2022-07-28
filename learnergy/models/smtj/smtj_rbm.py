@@ -1,4 +1,7 @@
 """SMTJ Bernoulli-Bernoulli Restricted Boltzmann Machine.
+
+Attributes:
+    logger (TYPE): Description
 """
 
 import time
@@ -11,21 +14,29 @@ import torch.optim as opt
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
-import learnergy.utils.constants as c
-import learnergy.utils.exception as e
-from learnergy.core import Model
 from learnergy.utils import logging
+
+from learnergy.models.bernoulli.rbm import RBM
 
 logger = logging.get_logger(__name__)
 
 
-class SMTJRBM(Model):
-    """An RBM class provides the basic implementation for Bernoulli-Bernoulli Restricted Boltzmann Machines.
-
-    References:
-        G. Hinton. A practical guide to training restricted Boltzmann machines.
-        Neural networks: Tricks of the trade (2012).
-
+class SMTJRBM(RBM):
+    """This class is strongly based upon Learnergy's bernouli.RBM class but
+    modified to incorporate sigma ratio, shift and slope.
+    
+    Attributes:
+        a (Tensor): Trainable bias for the visible layer
+        b (Tensor): Trainable bias for the hidden layer
+        lr (Float): Learning rate
+        n_hidden (Integer): Number of hidden nodes
+        n_visible (Integer): Number of visible nodes
+        optimizer (Optimizer): Optimizer used in learning
+        sigma_initial_shift (Float): Sigma shift
+        sigma_initial_slope (Float): Sigma slope
+        sigma_ratio (Float): Description
+        steps (Integer): The K in CD-K
+        W (Tensor): Trainable weights in the RBM
     """
 
     def __init__(
@@ -42,19 +53,6 @@ class SMTJRBM(Model):
         sigma_initial_shift: Optional[float] = 0.3,
         sigma_initial_slope: Optional[float] = 0.3
     ) -> None:
-        """Initialization method.
-
-        Args:
-            n_visible: Amount of visible units.
-            n_hidden: Amount of hidden units.
-            steps: Number of Gibbs' sampling steps.
-            learning_rate: Learning rate.
-            momentum: Momentum parameter.
-            decay: Weight decay used for penalization.
-            temperature: Temperature factor.
-            use_gpu: Whether GPU should be used or not.
-
-        """
 
         logger.info("Overriding class: Model -> RBM.")
 
@@ -72,13 +70,13 @@ class SMTJRBM(Model):
         # Learning rate
         self.lr = learning_rate
 
-        # Momentum parameter
+        # Momentum parameter -> not used in our case, leave at 0.0
         self.momentum = momentum
 
-        # Weight decay
+        # Weight decay -> not used in our case, leave at 0.0
         self.decay = decay
 
-        # Temperature factor
+        # Temperature factor -> not used in our case, leave at 1.0
         self.T = temperature
 
         # Weights matrix
@@ -99,11 +97,6 @@ class SMTJRBM(Model):
             self.parameters(), lr=learning_rate, momentum=momentum, weight_decay=decay
         )
 
-        # Checks if current device is CUDA-based
-        if self.device == "cuda":
-            # If yes, uses CUDA in the whole class
-            self.cuda()
-
         logger.info("Class overrided.")
         logger.debug(
             "Size: (%d, %d) | Learning: CD-%d | "
@@ -117,148 +110,19 @@ class SMTJRBM(Model):
             self.T,
         )
 
-    @property
-    def n_visible(self) -> int:
-        """Number of visible units."""
-
-        return self._n_visible
-
-    @n_visible.setter
-    def n_visible(self, n_visible: int) -> None:
-        if n_visible <= 0:
-            raise e.ValueError("`n_visible` should be > 0")
-
-        self._n_visible = n_visible
-
-    @property
-    def n_hidden(self) -> int:
-        """Number of hidden units."""
-
-        return self._n_hidden
-
-    @n_hidden.setter
-    def n_hidden(self, n_hidden: int) -> None:
-        if n_hidden <= 0:
-            raise e.ValueError("`n_hidden` should be > 0")
-
-        self._n_hidden = n_hidden
-
-    @property
-    def steps(self) -> int:
-        """Number of steps Gibbs' sampling steps."""
-
-        return self._steps
-
-    @steps.setter
-    def steps(self, steps: int) -> None:
-        if steps <= 0:
-            raise e.ValueError("`steps` should be > 0")
-
-        self._steps = steps
-
-    @property
-    def lr(self) -> float:
-        """Learning rate."""
-
-        return self._lr
-
-    @lr.setter
-    def lr(self, lr: float) -> None:
-        if lr < 0:
-            raise e.ValueError("`lr` should be >= 0")
-
-        self._lr = lr
-
-    @property
-    def momentum(self) -> float:
-        """Momentum parameter."""
-
-        return self._momentum
-
-    @momentum.setter
-    def momentum(self, momentum: float) -> None:
-        if momentum < 0:
-            raise e.ValueError("`momentum` should be >= 0")
-
-        self._momentum = momentum
-
-    @property
-    def decay(self) -> float:
-        """Weight decay."""
-
-        return self._decay
-
-    @decay.setter
-    def decay(self, decay: float) -> None:
-        if decay < 0:
-            raise e.ValueError("`decay` should be >= 0")
-
-        self._decay = decay
-
-    @property
-    def T(self) -> float:
-        """Temperature factor."""
-
-        return self._T
-
-    @T.setter
-    def T(self, T: float) -> None:
-        if T <= 0 or T > 1:
-            raise e.ValueError("`T` should be between 0 and 1")
-
-        self._T = T
-
-    @property
-    def W(self) -> torch.nn.Parameter:
-        """Weights' matrix."""
-
-        return self._W
-
-    @W.setter
-    def W(self, W: torch.nn.Parameter) -> None:
-        self._W = W
-
-    @property
-    def a(self) -> torch.nn.Parameter:
-        """Visible units bias."""
-
-        return self._a
-
-    @a.setter
-    def a(self, a: torch.nn.Parameter) -> None:
-        self._a = a
-
-    @property
-    def b(self) -> torch.nn.Parameter:
-        """Hidden units bias."""
-
-        return self._b
-
-    @b.setter
-    def b(self, b: torch.nn.Parameter) -> None:
-        self._b = b
-
-    @property
-    def optimizer(self) -> torch.optim.SGD:
-        """Stochastic Gradient Descent object."""
-
-        return self._optimizer
-
-    @optimizer.setter
-    def optimizer(self, optimizer: torch.optim.SGD) -> None:
-        self._optimizer = optimizer
-
     def setup_slope_shift(self):
+        """Initialize the random slope and shift.
+        """
         self.v_slope = nn.Parameter(
-            torch.abs(torch.randn(self.n_visible) * self.sigma_initial_slope + 1), 
+            torch.abs(torch.randn(self.n_visible) * self.sigma_initial_slope + 1),
             requires_grad=False)
 
         self.v_shift = nn.Parameter(
-            torch.randn(self.n_visible) * self.sigma_initial_shift, 
+            torch.randn(self.n_visible) * self.sigma_initial_shift,
             requires_grad=False)
 
         self.h_slope = nn.Parameter(
-            torch.abs(torch.randn(self.n_hidden) * self.sigma_initial_slope + 1), 
+            torch.abs(torch.randn(self.n_hidden) * self.sigma_initial_slope + 1),
             requires_grad=False)
 
         self.h_shift = nn.Parameter(
@@ -266,7 +130,14 @@ class SMTJRBM(Model):
             requires_grad=False)
 
     def sample_from_p(self, p: torch.Tensor) -> torch.Tensor:
-        # To reimplement
+        """Sample the data with bernouli distrabution, but affected by sigma ratio
+
+        Args:
+            p (Tensor): Input data to be sampled
+
+        Returns:
+            Tensor: Bernouli sampled data, affected by sigma ratio
+        """
         p = torch.randn(p.shape) * self.sigma_ratio * (0.5 - torch.abs(p - 0.5)) + p
         return F.relu(torch.sign(p - torch.autograd .Variable(torch.rand(p.size()))))
 
@@ -276,18 +147,19 @@ class SMTJRBM(Model):
         """Performs the pre-activation over hidden neurons, i.e., Wx' + b.
 
         Args:
-            v: A tensor incoming from the visible layer.
-            scale: A boolean to decide whether temperature should be used or not.
+            v (Tensor): A tensor incoming from the visible layer.
+            scale (Optional[Boolean], optional): A boolean to decide whether temperature
+            should be used or not.
 
-        Returns:
-            (torch.Tensor): An input for any type of activation function.
+        No Longer Returned:
+            (Tensor): An input for any type of activation function.
 
         """
 
         # Calculating neurons' activations
         activations = F.linear(
-            v, 
-            (self.W * self.h_slope).t(), 
+            v,
+            (self.W * self.h_slope).t(),
             self.b * self.h_slope + self.h_shift
         )
 
@@ -299,18 +171,18 @@ class SMTJRBM(Model):
         """Performs the hidden layer sampling, i.e., P(h|v).
 
         Args:
-            v: A tensor incoming from the visible layer.
-            scale: A boolean to decide whether temperature should be used or not.
+            v (Tensor): A tensor incoming from the visible layer.
+            scale (Optional[Boolean], optional): A boolean to decide whether temperature should be used or not.
 
-        Returns:
-            (torch.Tensor): The probabilities and states of the hidden layer sampling.
+        No Longer Returned:
+            (Tensor): The probabilities and states of the hidden layer sampling.
 
         """
 
         # Calculating neurons' activations
         activations = F.linear(
-            v, 
-            (self.W * self.h_slope).t(), 
+            v,
+            (self.W * self.h_slope).t(),
             self.b * self.h_slope + self.h_shift
         )
 
@@ -327,11 +199,11 @@ class SMTJRBM(Model):
         """Performs the visible layer sampling, i.e., P(v|h).
 
         Args:
-            h: A tensor incoming from the hidden layer.
-            scale: A boolean to decide whether temperature should be used or not.
+            h (Tensor): A tensor incoming from the hidden layer.
+            scale (Optional[Boolean], optional): A boolean to decide whether temperature should be used or not.
 
-        Returns:
-            (torch.Tensor): The probabilities and states of the visible layer sampling.
+        No Longer Returned:
+            (Tensor): The probabilities and states of the visible layer sampling.
 
         """
         # Calculating neurons' activations
@@ -340,7 +212,7 @@ class SMTJRBM(Model):
             (self.W.t() * self.v_slope).t(), 
             self.a * self.v_slope + self.v_shift
         )
-        
+
         probs = torch.sigmoid(activations)
 
         # Sampling current states
@@ -354,10 +226,10 @@ class SMTJRBM(Model):
         """Performs the whole Gibbs sampling procedure.
 
         Args:
-            v: A tensor incoming from the visible layer.
+            v (Tensor): A tensor incoming from the visible layer.
 
-        Returns:
-            (Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]): The probabilities and states of the hidden layer sampling (positive),
+        No Longer Returned:
+            (Tuple[Tensor, Tensor, Tensor, Tensor, Tensor]): The probabilities and states of the hidden layer sampling (positive),
                 the probabilities and states of the hidden layer sampling (negative)
                 and the states of the visible layer sampling (negative).
 
@@ -391,13 +263,13 @@ class SMTJRBM(Model):
 
     def energy(self, samples: torch.Tensor) -> torch.Tensor:
         """Calculates and frees the system's energy.
-
+        
         Args:
-            samples: Samples to be energy-freed.
-
+            samples (torch.Tensor): Samples to be energy-freed.
+        
         Returns:
-            (torch.Tensor): The system's energy based on input samples.
-
+            torch.Tensor: The system's energy based on input samples.
+        
         """
 
         # Calculate samples' activations
@@ -417,47 +289,6 @@ class SMTJRBM(Model):
 
         return energy
 
-    def pseudo_likelihood(self, samples: torch.Tensor) -> torch.Tensor:
-        """Calculates the logarithm of the pseudo-likelihood.
-
-        Args:
-            samples: Samples to be calculated.
-
-        Returns:
-            (torch.Tensor): The logarithm of the pseudo-likelihood based on input samples.
-
-        """
-
-        # Gathering a new array to hold the rounded samples
-        samples_binary = torch.round(samples)
-
-        # Calculates the energy of samples before flipping the bits
-        energy = self.energy(samples_binary)
-
-        # Samples an array of indexes to flip the bits
-        indexes = torch.randint(
-            0, self.n_visible, size=(samples.size(0), 1), device=self.device
-        )
-
-        # Creates an empty vector for filling the indexes
-        bits = torch.zeros(samples.size(0), samples.size(1), device=self.device)
-
-        # Fills the sampled indexes with 1
-        bits = bits.scatter_(1, indexes, 1)
-
-        # Actually flips the bits
-        samples_binary = torch.where(bits == 0, samples_binary, 1 - samples_binary)
-
-        # Calculates the energy after flipping the bits
-        energy1 = self.energy(samples_binary)
-
-        # Calculate the logarithm of the pseudo-likelihood
-        pl = torch.mean(
-            self.n_visible * torch.log(torch.sigmoid(energy1 - energy) + c.EPSILON)
-        )
-
-        return pl
-
     def fit(
         self,
         dataset: torch.utils.data.Dataset,
@@ -465,15 +296,15 @@ class SMTJRBM(Model):
         epochs: Optional[int] = 10,
     ) -> Tuple[float, float]:
         """Fits a new RBM model.
-
+        
         Args:
-            dataset: A Dataset object containing the training data.
-            batch_size: Amount of samples per batch.
-            epochs: Number of training epochs.
-
-        Returns:
-            (Tuple[float, float]): MSE (mean squared error) and log pseudo-likelihood from the training step.
-
+            dataset (Dataset): A Dataset object containing the training data.
+            batch_size (Optional[Integer], optional): Amount of samples per batch.
+            epochs (Optional[Integer], optional): Number of training epochs.
+        
+        No Longer Returned:
+            (Tuple[Float, Float]): MSE (mean squared error) and log pseudo-likelihood from the training step.
+        
         """
 
         # Transforming the dataset into training batches
@@ -556,13 +387,13 @@ class SMTJRBM(Model):
         self, dataset: torch.utils.data.Dataset
     ) -> Tuple[float, torch.Tensor]:
         """Reconstructs batches of new samples.
-
+        
         Args:
-            dataset: A Dataset object containing the testing data.
-
-        Returns:
-            (Tuple[float, torch.Tensor]): Reconstruction error and visible probabilities, i.e., P(v|h).
-
+            dataset (Dataset): A Dataset object containing the testing data.
+        
+        No Longer Returned:
+            (Tuple[Float, Tensor]): Reconstruction error and visible probabilities, i.e., P(v|h).
+        
         """
 
         logger.info("Reconstructing new samples ...")
@@ -611,13 +442,13 @@ class SMTJRBM(Model):
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Performs a forward pass over the data.
-
+        
         Args:
-            x: An input tensor for computing the forward pass.
-
+            x (Tensor): An input tensor for computing the forward pass.
+        
         Returns:
-            (torch.Tensor): A tensor containing the RBM's outputs.
-
+            Tensor: A tensor containing the RBM's outputs.
+        
         """
 
         # Calculates the outputs of the model
