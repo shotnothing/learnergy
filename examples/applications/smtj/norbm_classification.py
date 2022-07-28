@@ -18,12 +18,14 @@ from data.mnist_smtj import SMTJMnistDataset
 
 # Initialization
 config = {}
+loss_values = []
+acc_values = []
 
 ## Overall
 config['n_classes'] = 10
 config['sigma_ratio'] = 0.5 # Not used, should it?
-config['sigma_initial_shift'] = 1
-config['sigma_initial_slope'] = 1
+config['sigma_initial_shift'] = 0
+config['sigma_initial_slope'] = 0
 config['dataset'] = SMTJMnistDataset
 # config['dataset'] = torchvision.datasets.MNIST
 
@@ -38,7 +40,7 @@ config['layer_1']['lr'] = 0.01
 config['layer_2'] = {}
 config['layer_2']['layer_size'] = config['n_classes'] # Naturally
 config['layer_2']['batch_size'] = 100
-config['layer_2']['epochs'] = 10
+config['layer_2']['epochs'] = 20
 config['layer_2']['lr'] = 0.01
 
 class SMTJSigmoid(nn.Module):
@@ -145,7 +147,7 @@ if __name__ == '__main__':
 
     # Creating the optimzers
     optimizer = [
-        optim.Adam(layer1.parameters(), lr=config['layer_2']['lr']),
+        #optim.Adam(layer1.parameters(), lr=config['layer_2']['lr']),
         optim.Adam(layer2.parameters(), lr=config['layer_2']['lr']),
     ]
 
@@ -208,3 +210,23 @@ if __name__ == '__main__':
             val_acc = torch.mean((torch.sum(preds == y_batch).float()) / x_batch.size(0))
 
         print(f"Loss: {train_loss / len(train_batch)} | Val Accuracy: {val_acc}")
+        loss_values.append(train_loss / len(train_batch))
+        acc_values.append(val_acc)
+
+    fig, (ax1, ax2) = plt.subplots(1, 2)
+    fig.suptitle("Sigmoid+Linear σ-shift: {}, σ-slope: {}".format(
+        config['sigma_initial_shift'],
+        config['sigma_initial_slope']
+        ))
+
+    ax1.plot(np.array(loss_values))
+    ax1.set_xlabel("Epochs")
+    ax1.set_ylabel("Loss")
+    ax1.set_ylim([0, 1])
+
+    ax2.plot(np.array(acc_values))
+    ax2.set_xlabel("Epochs")
+    ax2.set_ylabel("Accuracy")
+    ax2.set_ylim([0, 1])
+
+    plt.show()
