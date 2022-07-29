@@ -1,7 +1,7 @@
 """SMTJ Bernoulli-Bernoulli Restricted Boltzmann Machine.
 
 Attributes:
-    logger (TYPE): Description
+    logger (TYPE): Learnergy's logging utility.
 """
 
 import time
