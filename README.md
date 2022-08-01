@@ -25,7 +25,7 @@ or
 `python ./learnergy/examples/applications/smtj/norbm_classification.py` for Sigmoid + Linear
 
 
-**Original Readme:**
+## Original Readme
 # Learnergy: Energy-based Machine Learners
 
 [![Latest release](https://img.shields.io/github/release/gugarosa/learnergy.svg)](https://github.com/gugarosa/learnergy/releases)
