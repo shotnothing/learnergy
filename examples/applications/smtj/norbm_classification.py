@@ -19,6 +19,9 @@ from data.mnist_smtj import SMTJMnistDataset
 import numpy as np
 import matplotlib.pyplot as plt
 
+import os # To remove libiomp5.dll duplication error when installing locally
+os.environ["KMP_DUPLICATE_LIB_OK"]="TRUE"
+
 # Initialization
 config = {}
 loss_values = []
