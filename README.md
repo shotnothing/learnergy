@@ -1,4 +1,8 @@
 # SMTJ Learnergy
+
+To install a local version of this package, use
+`pip install -e .`
+
 The SMTJ model is found in
 `learnergy/learnergy/models/smtj/`
 
