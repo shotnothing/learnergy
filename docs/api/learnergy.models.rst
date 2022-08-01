@@ -8,6 +8,7 @@ This is the heart, basically. All models are declared and implemented here. We w
     learnergy.models.deep
     learnergy.models.extra
     learnergy.models.gaussian
+    learnergy.models.smtj
 
 .. autoapimodule:: learnergy.models
    :members:

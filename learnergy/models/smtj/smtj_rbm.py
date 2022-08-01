@@ -32,9 +32,9 @@ class SMTJRBM(RBM):
         n_hidden (Integer): Number of hidden nodes
         n_visible (Integer): Number of visible nodes
         optimizer (Optimizer): Optimizer used in learning
-        sigma_initial_shift (Float): Sigma shift
-        sigma_initial_slope (Float): Sigma slope
-        sigma_ratio (Float): Description
+        sigma_initial_shift (Float): SMTJ property that gives each node a slightly different sigmoid activation function shift
+        sigma_initial_slope (Float): SMTJ property that gives each node a slightly different sigmoid activation function slope
+        sigma_ratio (Float): SMTJ property that affects the sampling
         steps (Integer): The K in CD-K
         W (Tensor): Trainable weights in the RBM
     """
