@@ -12,7 +12,7 @@ The expiriment scripts are found in
 `learnergy/examples/applications/smtj/`
 
 The 6000-row dataset is found in 
-`learnergy/data/`
+`learnergy/data/`.
 It is meant to be fully interchangable with `torchvision.datasets.MNIST`, which has 60000 rows.
 
 ## Running the scripts
