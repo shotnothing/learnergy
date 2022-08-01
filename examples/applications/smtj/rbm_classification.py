@@ -34,7 +34,7 @@ config['dataset'] = SMTJMnistDataset
 config['layer_1'] = {}
 config['layer_1']['layer_size'] = 100
 config['layer_1']['batch_size'] = 100
-config['layer_1']['epochs'] = 30
+config['layer_1']['epochs'] = 100
 config['layer_1']['lr'] = 0.01
 
 ## Step 2: Linear

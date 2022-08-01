@@ -46,7 +46,7 @@ if __name__ == '__main__':
     print(model.device)
 
     # Training an RBM
-    model.fit(train, batch_size=batch_size, epochs=1)
+    model.fit(train, batch_size=batch_size, epochs=100)
 
     # Creating the Fully Connected layer to append on top of RBM
     fc = nn.Linear(model.n_hidden, n_classes)
