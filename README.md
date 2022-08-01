@@ -20,8 +20,11 @@ It is meant to be fully interchangable with `torchvision.datasets.MNIST`, which 
 The hyperparameters are configured within the expiriment scripts, by changing the config dictionary at the top of the respective files.
 
 After installing the local package, do
+
 `python ./learnergy/examples/applications/smtj/rbm_classification.py` for RBM + Linear
+
 or
+
 `python ./learnergy/examples/applications/smtj/norbm_classification.py` for Sigmoid + Linear
 
 
