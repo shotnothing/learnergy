@@ -27,6 +27,12 @@ or
 
 `python ./learnergy/examples/applications/smtj/norbm_classification.py` for Sigmoid + Linear
 
+## Documentation
+Found under `docs`.
+
+Can view HTML output at `/learnergy/docs/_build/html/api/learnergy.models.smtj.html`
+
+To build, go into `/docs/` and run `make html`.
 
 ## Original Readme
 # Learnergy: Energy-based Machine Learners
