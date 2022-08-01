@@ -1,3 +1,18 @@
+# SMTJ Learnergy
+The SMTJ model is found in
+`learnergy/learnergy/models/smtj/`
+
+The expiriment scripts are found in
+`learnergy/examples/applications/smtj/`
+
+The hyperparameters are configured within the expiriment scripts, by changing the config dictionary at the top of the respective files.
+
+The 6000-row dataset is found in 
+`learnergy/data/`
+
+It is meant to be fully interchangable with `torchvision.datasets.MNIST`, which has 60000 rows.
+
+**Original Docs:**
 # Learnergy: Energy-based Machine Learners
 
 [![Latest release](https://img.shields.io/github/release/gugarosa/learnergy.svg)](https://github.com/gugarosa/learnergy/releases)
