@@ -1,5 +1,7 @@
 # SMTJ Learnergy
+SMTJ-based RBM neurons for the Learnergy package. Fork of https://github.com/gugarosa/learnergy.
 
+## Setup
 To install a local version of this package, use
 `pip install -e .`
 
@@ -9,14 +11,21 @@ The SMTJ model is found in
 The expiriment scripts are found in
 `learnergy/examples/applications/smtj/`
 
-The hyperparameters are configured within the expiriment scripts, by changing the config dictionary at the top of the respective files.
-
 The 6000-row dataset is found in 
 `learnergy/data/`
-
 It is meant to be fully interchangable with `torchvision.datasets.MNIST`, which has 60000 rows.
 
-**Original Docs:**
+## Running the scripts
+
+The hyperparameters are configured within the expiriment scripts, by changing the config dictionary at the top of the respective files.
+
+After installing the local package, do
+`python ./learnergy/examples/applications/smtj/rbm_classification.py` for RBM + Linear
+or
+`python ./learnergy/examples/applications/smtj/norbm_classification.py` for Sigmoid + Linear
+
+
+**Original Readme:**
 # Learnergy: Energy-based Machine Learners
 
 [![Latest release](https://img.shields.io/github/release/gugarosa/learnergy.svg)](https://github.com/gugarosa/learnergy/releases)
