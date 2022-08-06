@@ -1,4 +1,4 @@
-# SMTJ Learnergy
+# Stochastic-MTJ Learnergy
 SMTJ-based RBM neurons for the Learnergy package. Fork of https://github.com/gugarosa/learnergy.
 
 ## Setup
